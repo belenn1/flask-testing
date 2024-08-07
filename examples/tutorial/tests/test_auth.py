@@ -10,28 +10,32 @@ def test_register(client, app):
     assert client.get("/auth/register").status_code == 200
 
     # test that successful registration redirects to the login page
-    response = client.post("/auth/register", data={"username": "a", "password": "a"})
+    response = client.post("/auth/register", 
+                    data={"username": "b","email":"mail", "password": "a"})
+    print(response.data.decode())
     assert response.headers["Location"] == "/auth/login"
 
     # test that the user was inserted into the database
     with app.app_context():
         assert (
-            get_db().execute("SELECT * FROM user WHERE username = 'a'").fetchone()
+            get_db().execute("SELECT * FROM user WHERE username = 'b'").fetchone()
             is not None
         )
 
 
 @pytest.mark.parametrize(
-    ("username", "password", "message"),
+    ("username", "password", "email", "message"),
     (
-        ("", "", "Se necesita un nombre de usuario."),
-        ("a", "", "Se necesita una contraseña.."),
-        ("test", "test", "ya fue registrado"),
+        ("", "", "","Usuario o Contraseña incorrecta."),
+        ("a", "", "mail","Usuario o Contraseña incorrecta."),
+        ("a", "hfhjk", "","Se requiere email."),
+        ("test", "test","test@asdfasdf", "Usuario test ya fue registrado."),
+        ("b","aasdfsdf","test@mail","El mail test@mail ya fue registrado.")
     ),
 )
-def test_register_validate_input(client, username, password, message):
+def test_register_validate_input(client, username, password,email, message):
     response = client.post(
-        "/auth/register", data={"username": username, "password": password}
+        "/auth/register", data={"username": username, "password": password, "email": email}
     )
     assert message in response.data.decode()
 
@@ -54,7 +58,7 @@ def test_login(client, auth):
 
 @pytest.mark.parametrize(
     ("username", "password", "message"),
-    (("a", "test", "Usuario incorrecto."), ("test", "a", "Contraseña incorrecta.")),
+    (("a", "test", "Usuario o Contraseña incorrecta."), ("test", "a", "Usuario o Contraseña incorrecta.")),
 )
 def test_login_validate_input(auth, username, password, message):
     response = auth.login(username, password)
